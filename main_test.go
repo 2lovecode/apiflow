@@ -1,9 +1,14 @@
-# apiflow
-适用于有依赖关系的并行任务执行
+package apiflow
 
-### 示例
-```go
-    ctx := context.Background()
+import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+)
+
+func TestApiFlow_Do(t *testing.T) {
+	ctx := context.Background()
 
 	flow := NewApiFlow(10 * time.Second)
 
@@ -11,7 +16,7 @@
 		fmt.Printf("Executing node %s\n", node.ID)
 		time.Sleep(1 * time.Second)
 		m := make(map[string]string)
-		m["node_a_1"] = "goodA"
+		m["node_a_1"] = "goodsA"
 		m["node_a_2"] = "morningA"
 		return m, nil
 	})
@@ -53,9 +58,10 @@
 	// Adding nodes with dependencies
 	flow.AddNode(nodeA, []string{})
 	flow.AddNode(nodeB, []string{"A"})
-	flow.AddNode(nodeC, []string{"A"})
+	flow.AddNode(nodeC, []string{"B"})
 	flow.AddNode(nodeD, []string{"A"})
 
 	// Run the API flow
+
 	flow.Run(ctx)
-```
+}
