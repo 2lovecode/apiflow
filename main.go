@@ -64,7 +64,7 @@ func (af *ApiFlow) Run(ctx context.Context) {
 // executeNode runs the handler for a single node and sends the result to the results channel
 func (af *ApiFlow) executeNode(ctx context.Context, node *Node) {
 	node.Mutex.Lock()
-	if node.State != "pending" {
+	if node.State != StatePending {
 		node.Mutex.Unlock()
 		return
 	}
@@ -86,11 +86,13 @@ func (af *ApiFlow) executeNode(ctx context.Context, node *Node) {
 	node.Mutex.Lock()
 	if err != nil || errors.Is(nodeCtx.Err(), context.DeadlineExceeded) {
 		if errors.Is(nodeCtx.Err(), context.DeadlineExceeded) {
-			fmt.Printf("Node %s timed out\n", node.ID)
+			node.Failure = FailureTimeout
+		} else {
+			node.Failure = FailureExecute
 		}
-		node.State = "failure"
+		node.State = StateFailure
 	} else {
-		node.State = "success"
+		node.State = StateSuccess
 		node.Data = data // Store the result of the handler
 	}
 	node.Mutex.Unlock()
@@ -111,7 +113,7 @@ func (af *ApiFlow) processResults(ctx context.Context) {
 			noPending := true
 			for _, n := range af.tree.nodes {
 				n.Mutex.Lock()
-				if n.State == "pending" {
+				if n.State == StatePending {
 					noPending = false
 				}
 				n.Mutex.Unlock()
@@ -121,13 +123,13 @@ func (af *ApiFlow) processResults(ctx context.Context) {
 				return
 			}
 
-			if node.State == "success" {
+			if node.State == StateSuccess {
 				for sk, _ := range node.Successors {
 					successor := node.Successors[sk]
 					successorReady := true
 					successor.Mutex.Lock()
 					for _, predecessor := range successor.Predecessors {
-						if predecessor.State != "success" {
+						if predecessor.State != StateSuccess {
 							successorReady = false
 							break
 						}
@@ -139,13 +141,13 @@ func (af *ApiFlow) processResults(ctx context.Context) {
 						})
 					}
 				}
-			} else if node.State == "failure" {
+			} else if node.State == StateFailure {
 				for sk, _ := range node.Successors {
 					successor := node.Successors[sk]
 					successor.Mutex.Lock()
-					if successor.State == "pending" {
-						successor.State = "failure"
-						fmt.Printf("Marking node %s as failed due to dependency failure\n", successor.ID)
+					if successor.State == StatePending {
+						successor.State = StateFailure
+						successor.Failure = FailurePreError
 					}
 					successor.Mutex.Unlock()
 					af.resultsChan <- successor

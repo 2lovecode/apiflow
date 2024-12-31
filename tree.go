@@ -2,8 +2,23 @@ package apiflow
 
 import (
 	"context"
-	"fmt"
 	"sync"
+)
+
+type State string
+
+const (
+	StatePending = "pending"
+	StateSuccess = "success"
+	StateFailure = "failure"
+)
+
+type Failure string
+
+const (
+	FailureExecute  = "execute"
+	FailureTimeout  = "timeout"
+	FailurePreError = "pre-error"
 )
 
 // Handler is a function associated with a node type
@@ -20,9 +35,10 @@ type Node struct {
 	Predecessors map[string]*Node // Nodes that are dependencies of this node
 	Successors   map[string]*Node // Nodes that depend on this node
 	Handler      Handler          // Handler function associated with the node
-	State        string           // "pending", "success", "failure"
-	Data         interface{}      // Data produced by this node
-	Mutex        sync.Mutex       // To protect state and data modifications
+	State        State            // "pending", "success", "failure"
+	Failure      Failure
+	Data         interface{} // Data produced by this node
+	Mutex        sync.Mutex  // To protect state and data modifications
 }
 
 // DependencyTree represents the entire tree structure
@@ -44,14 +60,13 @@ func NewNode(id string, handler Handler) *Node {
 		Predecessors: make(map[string]*Node),
 		Successors:   make(map[string]*Node),
 		Handler:      handler,
-		State:        "pending",
+		State:        StatePending,
 	}
 }
 
 // AddNode adds a pre-created node to the dependency tree with its upstream dependencies
 func (dt *DependencyTree) AddNode(node *Node, upstreamIDs []string) {
 	if _, exists := dt.nodes[node.ID]; exists {
-		fmt.Printf("Node %s already exists.\n", node.ID)
 		return
 	}
 	dt.nodes[node.ID] = node
@@ -59,7 +74,6 @@ func (dt *DependencyTree) AddNode(node *Node, upstreamIDs []string) {
 	for _, upstreamID := range upstreamIDs {
 		upstreamNode, exists := dt.nodes[upstreamID]
 		if !exists {
-			fmt.Printf("Upstream node %s does not exist.\n", upstreamID)
 			continue
 		}
 		upstreamNode.Successors[node.ID] = node
