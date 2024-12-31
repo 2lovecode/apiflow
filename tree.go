@@ -37,8 +37,13 @@ type Node struct {
 	Handler      Handler          // Handler function associated with the node
 	State        State            // "pending", "success", "failure"
 	Failure      Failure
-	Data         interface{} // Data produced by this node
-	Mutex        sync.Mutex  // To protect state and data modifications
+	Data         *NodeData  // Data produced by this node
+	Mutex        sync.Mutex // To protect state and data modifications
+}
+
+type NodeData struct {
+	Ptr      interface{}
+	LazyByte []byte
 }
 
 // DependencyTree represents the entire tree structure

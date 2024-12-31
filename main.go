@@ -2,6 +2,7 @@ package apiflow
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/sourcegraph/conc"
@@ -29,6 +30,27 @@ func NewApiFlow(timeout time.Duration) *ApiFlow {
 // AddNode adds a node with dependencies to the flow
 func (af *ApiFlow) AddNode(node *Node, upstreamIDs []string) {
 	af.tree.AddNode(node, upstreamIDs)
+}
+
+func (af *ApiFlow) Receive(node *Node, data interface{}) error {
+	var err error
+	if n, ok := af.tree.nodes[node.ID]; ok {
+		node.Mutex.Lock()
+		if data != nil && n.Data != nil && n.Data.Ptr != nil {
+			var bd []byte
+			if n.Data.LazyByte != nil && len(n.Data.LazyByte) > 0 {
+				bd = n.Data.LazyByte
+			} else {
+				bd, err = json.Marshal(n.Data.Ptr)
+			}
+			if err == nil {
+				err = json.Unmarshal(bd, data)
+			}
+		}
+		node.Mutex.Unlock()
+		return err
+	}
+	return errors.New("node not exists")
 }
 
 // Run executes the API flow
@@ -93,7 +115,9 @@ func (af *ApiFlow) executeNode(ctx context.Context, node *Node) {
 		node.State = StateFailure
 	} else {
 		node.State = StateSuccess
-		node.Data = data // Store the result of the handler
+		node.Data = &NodeData{
+			Ptr: data,
+		} // Store the result of the handler
 	}
 	node.Mutex.Unlock()
 
