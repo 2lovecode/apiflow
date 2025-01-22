@@ -32,11 +32,6 @@ func TestApiFlow_Do(t *testing.T) {
 
 	flow := NewApiFlow(10 * time.Second)
 
-	dataA := &NodeAData{}
-	dataB := &NodeBData{}
-	dataC := &NodeCData{}
-	dataD := &NodeDData{}
-
 	nodeA := NewNode("A", func(ctx context.Context, node *Node, inputs map[string]interface{}) (interface{}, error) {
 		fmt.Printf("Executing node %s\n", node.ID)
 		time.Sleep(1 * time.Second)
@@ -49,48 +44,51 @@ func TestApiFlow_Do(t *testing.T) {
 
 	nodeB := NewNode("B", func(ctx context.Context, node *Node, inputs map[string]interface{}) (interface{}, error) {
 		fmt.Printf("Executing node %s\n", node.ID)
-
-		err := flow.Receive(nodeA, dataA)
+		da := &NodeAData{}
+		err := flow.Receive(nodeA, da)
 		if err != nil {
 			fmt.Println("Receive Data A Error:", err)
 		}
 		time.Sleep(2 * time.Second)
 		data := &NodeBData{
-			Prop1: fmt.Sprintf("%s:propb1", dataA.Prop1),
-			Prop2: fmt.Sprintf("%s:propb2", dataA.Prop2),
+			Prop1: fmt.Sprintf("%s:propb1", da.Prop1),
+			Prop2: fmt.Sprintf("%s:propb2", da.Prop2),
 		}
 		return data, nil
 	})
 
 	nodeC := NewNode("C", func(ctx context.Context, node *Node, inputs map[string]interface{}) (interface{}, error) {
 		fmt.Printf("Executing node %s\n", node.ID)
-		err := flow.Receive(nodeA, dataA)
+		da := &NodeAData{}
+		db := &NodeBData{}
+		err := flow.Receive(nodeA, da)
 		if err != nil {
 			fmt.Println("Receive Data A Error:", err)
 		}
-		err = flow.Receive(nodeB, dataB)
+		err = flow.Receive(nodeB, db)
 		if err != nil {
 			fmt.Println("Receive Data B Error:", err)
 		}
 		time.Sleep(1 * time.Second)
 
 		data := &NodeCData{
-			Prop1: fmt.Sprintf("%s:%s:propc1", dataA.Prop1, dataB.Prop1),
-			Prop2: fmt.Sprintf("%s:%s:propc2", dataA.Prop2, dataB.Prop2),
+			Prop1: fmt.Sprintf("%s:%s:propc1", da.Prop1, db.Prop1),
+			Prop2: fmt.Sprintf("%s:%s:propc2", da.Prop2, db.Prop2),
 		}
 		return data, nil
 	})
 
 	nodeD := NewNode("D", func(ctx context.Context, node *Node, inputs map[string]interface{}) (interface{}, error) {
 		fmt.Printf("Executing node %s\n", node.ID)
-		err := flow.Receive(nodeA, dataA)
+		da := &NodeAData{}
+		err := flow.Receive(nodeA, da)
 		if err != nil {
 			fmt.Println("Receive Data A Error:", err)
 		}
 		time.Sleep(3 * time.Second)
 		data := &NodeDData{
-			Prop1: fmt.Sprintf("%s:propd1", dataA.Prop1),
-			Prop2: fmt.Sprintf("%s:propd2", dataA.Prop2),
+			Prop1: fmt.Sprintf("%s:propd1", da.Prop1),
+			Prop2: fmt.Sprintf("%s:propd2", da.Prop2),
 		}
 		return data, nil
 	})
@@ -104,6 +102,11 @@ func TestApiFlow_Do(t *testing.T) {
 	// Run the API flow
 
 	flow.Run(ctx)
+
+	dataA := &NodeAData{}
+	dataB := &NodeBData{}
+	dataC := &NodeCData{}
+	dataD := &NodeDData{}
 
 	if err := flow.Receive(nodeA, dataA); err != nil {
 		t.Error("Receive Data A Error:", err)
