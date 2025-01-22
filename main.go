@@ -28,8 +28,8 @@ func NewApiFlow(timeout time.Duration) *ApiFlow {
 }
 
 // AddNode adds a node with dependencies to the flow
-func (af *ApiFlow) AddNode(node *Node, upstreamIDs []string) {
-	af.tree.AddNode(node, upstreamIDs)
+func (af *ApiFlow) AddNode(node *Node, upstreamNodes []*Node) {
+	af.tree.AddNode(node, upstreamNodes)
 }
 
 func (af *ApiFlow) Receive(node *Node, data interface{}) error {

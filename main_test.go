@@ -96,23 +96,48 @@ func TestApiFlow_Do(t *testing.T) {
 	})
 
 	// Adding nodes with dependencies
-	flow.AddNode(nodeA, []string{})
-	flow.AddNode(nodeB, []string{"A"})
-	flow.AddNode(nodeC, []string{"A", "B"})
-	flow.AddNode(nodeD, []string{"A"})
+	flow.AddNode(nodeA, nil)
+	flow.AddNode(nodeB, []*Node{nodeA})
+	flow.AddNode(nodeC, []*Node{nodeA, nodeB})
+	flow.AddNode(nodeD, []*Node{nodeA})
 
 	// Run the API flow
 
 	flow.Run(ctx)
 
-	fmt.Println("Receive Data A Error:", flow.Receive(nodeA, dataA))
-	fmt.Println("Receive Data B Error:", flow.Receive(nodeB, dataB))
-	fmt.Println("Receive Data C Error:", flow.Receive(nodeC, dataC))
-	fmt.Println("Receive Data D Error:", flow.Receive(nodeD, dataD))
+	if err := flow.Receive(nodeA, dataA); err != nil {
+		t.Error("Receive Data A Error:", err)
+	}
+	if err := flow.Receive(nodeB, dataB); err != nil {
+		t.Error("Receive Data B Error:", err)
+	}
+	if err := flow.Receive(nodeC, dataC); err != nil {
+		t.Error("Receive Data C Error:", err)
+	}
+	if err := flow.Receive(nodeD, dataD); err != nil {
+		t.Error("Receive Data D Error:", err)
+	}
 
-	fmt.Printf("Receive Data A: %v\n", dataA)
-	fmt.Printf("Receive Data B: %v\n", dataB)
-	fmt.Printf("Receive Data C: %v\n", dataC)
-	fmt.Printf("Receive Data D: %v\n", dataD)
+	if fmt.Sprint(dataA) == "&{propa1 propa2}" {
+		t.Log("Receive Data A Success")
+	} else {
+		t.Error("Receive Data A Error")
+	}
+	if fmt.Sprint(dataB) == "&{propa1:propb1 propa2:propb2}" {
+		t.Log("Receive Data B Success")
+	} else {
+		t.Error("Receive Data B Error")
+	}
 
+	if fmt.Sprint(dataC) == "&{propa1:propa1:propb1:propc1 propa2:propa2:propb2:propc2}" {
+		t.Log("Receive Data C Success")
+	} else {
+		t.Error("Receive Data C Error")
+	}
+
+	if fmt.Sprint(dataD) == "&{propa1:propd1 propa2:propd2}" {
+		t.Log("Receive Data D Success")
+	} else {
+		t.Error("Receive Data D Error")
+	}
 }

@@ -70,18 +70,24 @@ func NewNode(id string, handler Handler) *Node {
 }
 
 // AddNode adds a pre-created node to the dependency tree with its upstream dependencies
-func (dt *DependencyTree) AddNode(node *Node, upstreamIDs []string) {
+func (dt *DependencyTree) AddNode(node *Node, upstreamNodes []*Node) {
 	if _, exists := dt.nodes[node.ID]; exists {
 		return
 	}
 	dt.nodes[node.ID] = node
 
-	for _, upstreamID := range upstreamIDs {
-		upstreamNode, exists := dt.nodes[upstreamID]
+	for _, n := range upstreamNodes {
+		if n == nil {
+			continue
+		}
+		if n.ID == "" {
+			continue
+		}
+		upstreamNode, exists := dt.nodes[n.ID]
 		if !exists {
 			continue
 		}
 		upstreamNode.Successors[node.ID] = node
-		node.Predecessors[upstreamID] = upstreamNode
+		node.Predecessors[n.ID] = upstreamNode
 	}
 }
